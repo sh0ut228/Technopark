@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MAX Bot Admin</title>
+    
+    <!-- Bootstrap 5 -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.8.1/font/bootstrap-icons.css">
+    <!-- DataTables -->
+    <link href="https://cdn.datatables.net/1.11.5/css/dataTables.bootstrap5.min.css" rel="stylesheet">
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Custom CSS -->
+    <link href="/static/css/style.css" rel="stylesheet">
+</head>
+<body>
+    <div class="container-fluid">
+        <div class="row">
+            <!-- Sidebar -->
+            <nav id="sidebar" class="col-md-3 col-lg-2 d-md-block bg-dark sidebar">
+                <div class="position-sticky pt-3">
+                    <div class="text-center mb-4 mt-3">
+                        <i class="bi bi-robot text-white" style="font-size: 3rem;"></i>
+                        <h5 class="text-white mt-2">MAX Bot Admin</h5>
+                        <small class="text-white-50">Управление ссылками</small>
+                    </div>
+                    
+                    <ul class="nav flex-column">
+                        <li class="nav-item">
+                            <a class="nav-link active" href="#" data-page="dashboard">
+                                <i class="bi bi-speedometer2 me-2"></i>
+                                Дашборд
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="#" data-page="links">
+                                <i class="bi bi-link me-2"></i>
+                                Ссылки
+                                <span class="badge bg-primary rounded-pill ms-2" id="links-count">10</span>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="#" data-page="users">
+                                <i class="bi bi-people me-2"></i>
+                                Пользователи
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="#" data-page="stats">
+                                <i class="bi bi-graph-up me-2"></i>
+                                Статистика
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="#" data-page="settings">
+                                <i class="bi bi-gear me-2"></i>
+                                Настройки
+                            </a>
+                        </li>
+                        <li class="nav-item mt-4">
+                            <a class="nav-link text-danger" href="#" id="logoutBtn">
+                                <i class="bi bi-box-arrow-right me-2"></i>
+                                Выход
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </nav>
+
+            <!-- Main content -->
+            <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4">
+                <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+                    <h1 id="page-title">Дашборд</h1>
+                    <div class="btn-toolbar mb-2 mb-md-0">
+                        <button type="button" class="btn btn-sm btn-outline-secondary me-2" id="refreshBtn">
+                            <i class="bi bi-arrow-repeat"></i> Обновить
+                        </button>
+                        <div class="dropdown">
+                            <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                                <i class="bi bi-download"></i> Экспорт
+                            </button>
+                            <ul class="dropdown-menu">
+                                <li><a class="dropdown-item" href="#" id="exportCSV">CSV</a></li>
+                                <li><a class="dropdown-item" href="#" id="exportJSON">JSON</a></li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="content-area">
+                    <div class="text-center mt-5">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Загрузка...</span>
+                        </div>
+                        <p class="mt-3">Загрузка данных...</p>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <!-- Login Modal -->
+    <div class="modal fade" id="loginModal" tabindex="-1" data-bs-backdrop="static">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title">
+                        <i class="bi bi-shield-lock me-2"></i>
+                        Вход в панель управления
+                    </h5>
+                </div>
+                <div class="modal-body">
+                    <form id="loginForm">
+                        <div class="mb-3">
+                            <label for="token" class="form-label">Токен доступа</label>
+                            <input type="password" class="form-control" id="token" 
+                                   placeholder="Введите токен администратора" required>
+                            <div class="form-text">
+                                Используйте токен: <code>max_bot_admin_secret_2024</code>
+                            </div>
+                        </div>
+                        <button type="submit" class="btn btn-primary w-100">
+                            <i class="bi bi-box-arrow-in-right me-2"></i>
+                            Войти
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add/Edit Link Modal -->
+    <div class="modal fade" id="linkModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="linkModalTitle">Добавить ссылку</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="linkForm">
+                        <input type="hidden" id="linkId">
+                        
+                        <div class="mb-3">
+                            <label class="form-label">Код</label>
+                            <input type="text" class="form-control" id="linkCode" 
+                                   placeholder="1.1.1" required>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label">Menu Code</label>
+                            <input type="text" class="form-control" id="menuCode" 
+                                   placeholder="sub_startup" required>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label">Название</label>
+                            <input type="text" class="form-control" id="linkName" 
+                                   placeholder="Запуск бизнеса" required>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label">URL</label>
+                            <input type="url" class="form-control" id="linkUrl" 
+                                   placeholder="https://spbtech.ru/..." required>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Категория</label>
+                                <select class="form-control" id="linkCategory">
+                                    <option value="finance">💰 Финансовые услуги</option>
+                                    <option value="development">📈 Программы развития</option>
+                                    <option value="infrastructure">🏢 Доступ к инфраструктуре</option>
+                                </select>
+                            </div>
+                            
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Родительская категория</label>
+                                <select class="form-control" id="parentCategory">
+                                    <option value="1">Категория 1</option>
+                                    <option value="2">Категория 2</option>
+                                    <option value="3">Категория 3</option>
+                                </select>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+                    <button type="button" class="btn btn-primary" onclick="saveLink()">Сохранить</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Delete Modal -->
+    <div class="modal fade" id="deleteModal" tabindex="-1">
+        <div class="modal-dialog modal-sm">
+            <div class="modal-content">
+                <div class="modal-header bg-danger text-white">
+                    <h5 class="modal-title">Подтверждение</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p>Удалить ссылку <strong id="deleteLinkName"></strong>?</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+                    <button type="button" class="btn btn-danger" onclick="confirmDelete()">Удалить</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Templates -->
+    <template id="dashboard-template">
+        <div class="row">
+            <div class="col-md-3 mb-4">
+                <div class="card stat-card">
+                    <div class="card-body">
+                        <h6 class="text-muted">Всего ссылок</h6>
+                        <h2 id="totalLinks" class="mb-0">0</h2>
+                        <i class="bi bi-link"></i>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3 mb-4">
+                <div class="card stat-card">
+                    <div class="card-body">
+                        <h6 class="text-muted">Пользователей</h6>
+                        <h2 id="totalUsers" class="mb-0">0</h2>
+                        <i class="bi bi-people"></i>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3 mb-4">
+                <div class="card stat-card">
+                    <div class="card-body">
+                        <h6 class="text-muted">Переходов</h6>
+                        <h2 id="totalClicks" class="mb-0">0</h2>
+                        <i class="bi bi-cursor"></i>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3 mb-4">
+                <div class="card stat-card">
+                    <div class="card-body">
+                        <h6 class="text-muted">Активных сегодня</h6>
+                        <h2 id="activeToday" class="mb-0">0</h2>
+                        <i class="bi bi-activity"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row mt-4">
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <i class="bi bi-pie-chart me-2"></i>
+                        Переходы по категориям
+                    </div>
+                    <div class="card-body">
+                        <canvas id="categoryChart" height="250"></canvas>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <i class="bi bi-table me-2"></i>
+                        Топ-5 ссылок
+                    </div>
+                    <div class="card-body">
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>Название</th>
+                                    <th>Переходы</th>
+                                    <th>%</th>
+                                </tr>
+                            </thead>
+                            <tbody id="topLinksTable"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </template>
+
+    <template id="links-template">
+        <div class="card">
+            <div class="card-header">
+                <div class="d-flex justify-content-between align-items-center">
+                    <span>
+                        <i class="bi bi-link me-2"></i>
+                        Управление ссылками
+                    </span>
+                    <button class="btn btn-primary btn-sm" onclick="showAddLinkModal()">
+                        <i class="bi bi-plus-lg me-1"></i>
+                        Добавить
+                    </button>
+                </div>
+            </div>
+            <div class="card-body">
+                <table id="linksTable" class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th>Код</th>
+                            <th>Название</th>
+                            <th>URL</th>
+                            <th>Категория</th>
+                            <th>Переходов</th>
+                            <th>Действия</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
+    </template>
+
+    <template id="users-template">
+        <div class="card">
+            <div class="card-header">
+                <i class="bi bi-people me-2"></i>
+                Пользователи
+            </div>
+            <div class="card-body">
+                <table id="usersTable" class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Username</th>
+                            <th>Имя</th>
+                            <th>Первый вход</th>
+                            <th>Последний вход</th>
+                            <th>Действий</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
+    </template>
+
+    <template id="stats-template">
+        <div class="card">
+            <div class="card-header">
+                <i class="bi bi-graph-up me-2"></i>
+                Статистика
+            </div>
+            <div class="card-body">
+                <canvas id="statsChart" height="300"></canvas>
+            </div>
+        </div>
+    </template>
+
+    <template id="settings-template">
+        <div class="card">
+            <div class="card-header">
+                <i class="bi bi-gear me-2"></i>
+                Настройки
+            </div>
+            <div class="card-body">
+                <form id="settingsForm">
+                    <div class="mb-3">
+                        <label class="form-label">Приветственное сообщение</label>
+                        <input type="text" class="form-control" id="welcomeMessage">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Имя бота</label>
+                        <input type="text" class="form-control" id="botName">
+                    </div>
+                    <button type="submit" class="btn btn-primary">Сохранить</button>
+                </form>
+            </div>
+        </div>
+    </template>
+
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.datatables.net/1.11.5/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdn.datatables.net/1.11.5/js/dataTables.bootstrap5.min.js"></script>
+    <script src="/static/js/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,3 @@
+"""
+MAX Bot Package
+"""
